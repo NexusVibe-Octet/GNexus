@@ -4,7 +4,7 @@
 # Local build (before the release exists): see deploy/linux/arch/README.md.
 
 pkgname=gnexus
-pkgver=1.1.1
+pkgver=1.1.2
 pkgrel=1
 pkgdesc="Replaces Logitech Gaming Software / G HUB for the G13, G502 X PLUS and PRO X Wireless"
 arch=('x86_64')
@@ -20,7 +20,7 @@ install=gnexus.install
 options=('!lto' '!debug')
 source=("$pkgname-$pkgver.tar.gz::$url/archive/refs/tags/v$pkgver.tar.gz")
 # Run `updpkgsums` once the release archive is on GitHub.
-sha256sums=('2b1a183b3d0ba0e773b22f64990f80865279069444ebd56025aa8a24d9fa9a61')
+sha256sums=('SKIP')
 
 prepare() {
     cd "$pkgname-$pkgver"
