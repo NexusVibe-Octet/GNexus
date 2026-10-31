@@ -97,6 +97,13 @@
     <button class="ghost small" id="conflict-close">FERMER CES LOGICIELS</button>
   </div>
 
+  <!-- Linux: device access missing (udev rules), or running inside a container -->
+  <div class="banner hidden" id="access-banner">
+    <svg viewBox="0 0 24 24"><path d="M12 3 2 20h20L12 3z"/><path d="M12 10v4M12 17h.01"/></svg>
+    <span id="access-text"></span>
+    <button class="ghost small" id="access-grant">AUTORISER L'ACCÈS</button>
+  </div>
+
   <!-- where the edited profile applies outside this window -->
   <div class="scope-bar" id="scope-bar">
     <i class="dot"></i><span id="scope-text"></span>
@@ -433,6 +440,15 @@
     <label class="toggle"><input type="checkbox" id="set-autostart"><i></i><span class="win-only">Lancer G Nexus au démarrage de Windows</span><span class="linux-only">Lancer G Nexus à l'ouverture de session</span></label>
     <label class="toggle"><input type="checkbox" id="set-minimized"><i></i><span class="win-only">Au démarrage de Windows, rester réduit dans la zone de notification</span><span class="linux-only">À l'ouverture de session, rester réduit dans la zone de notification</span></label>
     <label class="toggle"><input type="checkbox" id="set-tray"><i></i><span>Fermer la fenêtre la réduit dans la zone de notification (le G13 reste actif)</span></label>
+    <div class="linux-only hidden" id="set-access">
+      <div class="set-dir">
+        <span class="cap">ACCÈS AUX APPAREILS</span>
+        <span class="muted" id="set-access-state">—</span>
+        <button class="ghost small hidden" id="set-access-grant">AUTORISER L'ACCÈS</button>
+        <button class="ghost small hidden" id="set-access-record">AUTORISER RECORD</button>
+      </div>
+      <p class="muted small-print">G Nexus accède au G13, à la souris, au casque et à son clavier virtuel (/dev/uinput) grâce à des règles udev, installées une seule fois avec le mot de passe administrateur. Enregistrer des macros (touche RECORD) demande en plus la lecture des claviers et souris : tout programme de votre session pourra alors lire la frappe, comme sous X11.</p>
+    </div>
     </div>
     <div class="set-pane hidden" data-pane="g13">
     <div class="set-row">

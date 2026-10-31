@@ -58,7 +58,7 @@ It runs in the notification area, needs no Logitech software, and keeps working 
 
 ## Download
 
-Installers are attached to each [release](../../releases): Windows installer and Arch / CachyOS package.
+Installers are attached to each [release](../../releases): Windows installer, Linux AppImage and Arch / CachyOS package.
 
 ### Windows
 
@@ -69,12 +69,14 @@ Installers are attached to each [release](../../releases): Windows installer and
 
 ### Linux
 
-Tested on CachyOS (Arch), KDE Plasma 6, Wayland, PipeWire. Automatic profile switching and the in-game overlay need **KDE Plasma**; everything else works on any desktop.
+Tested on CachyOS (Arch) and **Bazzite** (Fedora Atomic), KDE Plasma 6, Wayland, PipeWire. Automatic profile switching and the in-game overlay need **KDE Plasma**; everything else works on any desktop.
 
-1. Arch / CachyOS: install the package attached to the release, `sudo pacman -U gnexus-x.y.z-1-x86_64.pkg.tar.zst` (or build it with the [`PKGBUILD`](deploy/linux/arch)). It installs the udev rules and loads `uinput`; plug the devices in again afterwards. Other distributions: build from source (see below).
-2. Device access without root comes from the udev rules in [`deploy/linux`](deploy/linux) (installed by the package). The optional `71-gnexus-record.rules` rule is only needed to record macros: the package prints how to enable it.
-3. Do not run another program driving the same devices at the same time (Solaar, Piper / libratbag, HeadsetControl).
-4. The equalizer is a PipeWire filter placed in front of the headset's output: no root rights, and the default output does not change.
+1. **AppImage** (Bazzite, Fedora, Ubuntu, Mint… and any other distribution): download `gnexus_x.y.z_x86_64.AppImage` from the release, make it executable (right click › Properties › Executable, or `chmod +x`) and run it. Nothing is installed into the system and no reboot is needed. On Bazzite, *Gear Lever* (preinstalled) can add it to the application menu and keep it up to date.
+   - **Run the AppImage directly on the system, not inside a distrobox / toolbox**: in a container, starting at login, the LCD clock and the overlay misbehave (G Nexus shows a banner about it).
+2. **Arch / CachyOS**: install the package attached to the release instead, `sudo pacman -U gnexus-x.y.z-1-x86_64.pkg.tar.zst` (or build it with the [`PKGBUILD`](deploy/linux/arch)). It installs the udev rules and loads `uinput`; plug the devices in again afterwards.
+3. **Device access without root** comes from the udev rules in [`deploy/linux`](deploy/linux). With the AppImage, when a plugged-in device or the virtual keyboard (`/dev/uinput`) cannot be opened, G Nexus shows an **ALLOW ACCESS** banner: the administrator password is asked once and the rules are copied to `/etc` (writable, even on Bazzite). On Bazzite the devices are often already accessible (rules shipped by the system) and nothing is asked. Macro recording (RECORD key) is allowed separately: *Settings › General › Device access*.
+4. Do not run another program driving the same devices at the same time (Solaar, Piper / libratbag, HeadsetControl).
+5. The equalizer is a PipeWire filter placed in front of the headset's output: no root rights, and the default output does not change.
 
 Your Windows configuration can be moved over: *Settings › Configuration › Export* on Windows, then *Import* on Linux.
 
@@ -85,6 +87,11 @@ Rust (stable) is required. The workspace is `cargo test --workspace`, `cargo cli
 - **Linux** (Arch packages): `webkit2gtk-4.1 gtk3 libayatana-appindicator hidapi systemd-libs base-devel`, then
   `CARGO_TARGET_DIR=target cargo build --release -p g13-gui` (binary `target/release/g13-studio`).
   `.cargo/config.toml` holds a build directory specific to the author's Windows machine: `CARGO_TARGET_DIR` overrides it.
+- **AppImage**: on Ubuntu 22.04 (a distrobox is enough, e.g. on Bazzite), packages
+  `libwebkit2gtk-4.1-dev libgtk-3-dev libayatana-appindicator3-dev librsvg2-dev libssl-dev libxdo-dev libudev-dev libfuse2 patchelf`,
+  then from `crates/g13-gui`: `CARGO_TARGET_DIR=../../target npx @tauri-apps/cli@2 build --bundles appimage`
+  (or `cargo tauri build --bundles appimage`). The [`linux-appimage.yml`](.github/workflows/linux-appimage.yml) workflow
+  builds it and attaches it to every published release.
 - **Windows** (GNU toolchain): from `crates/g13-gui`, `npx @tauri-apps/cli@2 build` builds the NSIS installer.
 
 Technical documentation (in French): [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md), [`docs/LINUX_PORT.md`](docs/LINUX_PORT.md).

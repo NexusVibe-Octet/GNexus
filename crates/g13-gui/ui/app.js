@@ -749,6 +749,7 @@ async function openSettings() {
     $("#set-backup-keep").value = s.auto_backup_keep || 10;
     showLastBackup(s.last_backup);
   } catch (e) { toast(String(e), true); }
+  checkAccess();
   openSheet("#settings");
 }
 
@@ -1135,6 +1136,61 @@ $("#conflict-close").addEventListener("click", async () => {
   } catch (e) { toast(String(e), true); }
 });
 
+// ---- Linux: access to the devices (udev rules), container ------------------------------------
+
+let ACCESS = null;
+function renderAccess(a) {
+  ACCESS = a;
+  const banner = $("#access-banner");
+  $("#set-access").classList.toggle("hidden", !a);
+  if (!a) { banner.classList.add("hidden"); return; }
+  const missing = [...a.blocked];
+  if (!a.uinput) missing.push(t("le clavier virtuel (/dev/uinput)"));
+  let text = "";
+  if (a.container) {
+    text = t("G Nexus tourne dans un conteneur (distrobox, toolbox) : le démarrage à l'ouverture de session, l'heure du LCD et l'overlay peuvent mal fonctionner. Lancez l'AppImage de G Nexus directement sur le système, hors du conteneur.");
+  } else if (missing.length) {
+    text = t("G Nexus n'a pas accès à : {who}. Autorisez l'accès une fois (le mot de passe administrateur est demandé), puis rebranchez l'appareil si besoin.", { who: missing.join(", ") });
+  }
+  banner.classList.toggle("hidden", !text);
+  $("#access-text").textContent = text;
+  $("#access-grant").classList.toggle("hidden", a.container || !missing.length);
+  // Settings › General
+  $("#set-access-state").textContent = a.container ? t("dans un conteneur : non disponible")
+    : missing.length ? t("manquant : {who}", { who: missing.join(", ") })
+    : a.record ? t("OK (RECORD compris)") : t("OK (RECORD non autorisé)");
+  $("#set-access-grant").classList.toggle("hidden", a.container || !missing.length);
+  $("#set-access-record").classList.toggle("hidden", a.container || a.record);
+}
+
+async function checkAccess() {
+  try { renderAccess(await invoke("device_access")); } catch { renderAccess(null); /* mock / unavailable */ }
+}
+
+async function grantAccess(record) {
+  const buttons = ["#access-grant", "#set-access-grant", "#set-access-record"].map((id) => $(id));
+  buttons.forEach((b) => { b.disabled = true; });
+  try {
+    const restart = await invoke("install_device_access", { record });
+    if (restart) {
+      sessionStorage.setItem("g13-toast", t("Accès aux appareils autorisé"));
+      toast(t("Accès autorisé : G Nexus redémarre…"));
+      setTimeout(() => invoke("restart_app").catch(() => {}), 1200);
+      return;
+    }
+    await checkAccess();
+    toast(ACCESS && (ACCESS.blocked.length || !ACCESS.uinput)
+      ? t("Règles installées : rebranchez l'appareil pour terminer") : t("Accès aux appareils autorisé"));
+  } catch (e) {
+    toast(t("Accès non autorisé : {e}", { e }), true);
+  } finally {
+    buttons.forEach((b) => { b.disabled = false; });
+  }
+}
+$("#access-grant").addEventListener("click", () => grantAccess(!!(ACCESS && ACCESS.record)));
+$("#set-access-grant").addEventListener("click", () => grantAccess(!!(ACCESS && ACCESS.record)));
+$("#set-access-record").addEventListener("click", () => grantAccess(true));
+
 // ---- boot ------------------------------------------------------------------------------------
 
 async function boot() {
@@ -1233,6 +1289,8 @@ async function boot() {
   } else {
     checkConflicts();
     setInterval(checkConflicts, 15000);
+    checkAccess();
+    setInterval(checkAccess, 5000);
     // the overlay may have edited a profile and changed the preview: take them back
     await listen("overlay-closed", async () => {
       await refreshProfiles();

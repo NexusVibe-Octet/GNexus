@@ -1,4 +1,4 @@
-# Portage Linux (CachyOS)
+# Portage Linux (CachyOS, Bazzite)
 
 Objectif : G Nexus fait sous Linux tout ce qu'il fait sous Windows, pour les trois appareils, avec la même
 interface. Cible : CachyOS (Arch), session **Wayland** (KDE Plasma ou GNOME), **PipeWire**.
@@ -145,8 +145,37 @@ La version Windows reste la référence : chaque étape doit laisser `cargo buil
     installe `/usr/bin/gnexus`, le `.desktop` et les icônes, `70-gnexus-uaccess.rules` dans
     `/usr/lib/udev/rules.d` (rechargées par le hook de pacman), `uinput` au démarrage ; la règle RECORD
     reste facultative (`/usr/share/doc/gnexus/`, message après installation). Pas de service systemd :
-    zone de notification + démarrage à l'ouverture de session (réglage de l'appli). Pas d'AppImage
-    pour l'instant (elle ne pourrait pas installer les règles udev).
+    zone de notification + démarrage à l'ouverture de session (réglage de l'appli).
+11. **AppImage, Bazzite** (systèmes immuables : `/usr` en lecture seule, pas de `pacman` / `dnf`).
+    **Fait (2026-10-31)**, vérifié sur Bazzite 44 (KDE Plasma 6, Wayland) dans une VM VMware avec le G13.
+    - Choix : AppImage plutôt qu'un `.rpm` (`rpm-ostree install` = couche sur l'image, déconseillée par
+      Bazzite, redémarrage) ou un Flatpak (bac à sable : hidraw, uinput, KWin, PipeWire compliqués).
+      Elle tourne aussi sur les autres distributions.
+    - Construite sur **Ubuntu 22.04** (glibc ancienne), en local dans une distrobox, en CI par
+      `.github/workflows/linux-appimage.yml` (jointe à chaque version publiée, ou à télécharger depuis
+      l'onglet Actions). `crates/g13-gui/tauri.linux.conf.json` (fusionné par Tauri sous Linux seulement :
+      Windows inchangé) : binaire `gnexus`, cible `appimage`. WebKitGTK, GTK et AppIndicator sont inclus
+      (~81 Mo). Le crochet GTK de linuxdeploy ne force plus `GDK_BACKEND=x11` : Wayland natif.
+    - **Accès aux appareils** (`platform/linux/access.rs`) : une AppImage ne peut pas installer de règles
+      udev. G Nexus teste l'accès *réel* toutes les 5 s (nœuds hidraw de ses appareils, retrouvés par le
+      périphérique USB parent comme le fait `ATTRS`, et `/dev/uinput`) et affiche alors un bandeau
+      AUTORISER L'ACCÈS : `pkexec /bin/sh -c …` (environnement vidé) écrit les règles embarquées
+      (`include_str!` de `deploy/linux`) dans `/etc/udev/rules.d` et `uinput.conf` dans
+      `/etc/modules-load.d` (modifiables sur Bazzite), puis `udevadm trigger`. Si `/dev/uinput` manquait au
+      démarrage, le moteur n'a pas pu démarrer : G Nexus redémarre seul. RECORD s'autorise à part
+      (*Paramètres › Général › Accès aux appareils*).
+    - Sur Bazzite, tout est déjà accessible sans nos règles : `/dev/uinput` par les règles Steam,
+      les nœuds hidraw Logitech par celles d'OpenRGB (mode 0666). Aucun bandeau.
+    - **Conteneur** (`/run/.containerenv`, `/.dockerenv`) : bandeau d'avertissement, pas d'installation.
+      Retour d'un utilisateur de Bazzite qui lançait G Nexus dans une distrobox : démarrage automatique
+      absent (le `.desktop` pointait vers un chemin du conteneur), fuseau horaire faux (`/etc/localtime`
+      du conteneur), overlay mal placé. Les trois sont corrects avec l'AppImage lancée sur le système.
+    - **Démarrage automatique** : `auto-launch` écrit `Exec=<chemin> --autostart` sans guillemets ; l'AppImage
+      s'appelle `G Nexus_x.y.z_amd64.AppImage` (espace). `enable_autostart` (g13-gui) remet le chemin entre
+      guillemets. Le plugin enregistre le chemin de l'AppImage (`$APPIMAGE`), pas celui du montage
+      temporaire ; il est réinscrit à chaque lancement (AppImage déplacée par Gear Lever).
+    - Vérifié par l'utilisateur : interface, G13, icône de notification, overlay à gauche / au centre /
+      à droite, heure locale, démarrage automatique après redémarrage.
 
 ## Points d'attention
 

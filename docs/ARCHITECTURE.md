@@ -78,7 +78,7 @@ crates/
       mod.rs                  traits + fabriques default_*()
       mock.rs                 RecordingInjector (--dry-run, tests), watchers nuls
       windows/                injector.rs (SendInput) · foreground.rs · media.rs
-      linux/                  injector.rs + gamepad.rs (uinput) · recorder.rs (evdev) · foreground.rs (KWin) · media.rs (MPRIS) · audio.rs (PipeWire)
+      linux/                  injector.rs + gamepad.rs (uinput) · recorder.rs (evdev) · foreground.rs (KWin) · media.rs (MPRIS) · audio.rs (PipeWire) · access.rs (règles udev)
   g13-gui/                    G13 Studio (Tauri 2), binaire `g13-studio`
     src/main.rs               fenêtre, icône de notification, autostart, instance unique,
                                 commandes Tauri, relais UiEvent → événement "g13"
@@ -232,6 +232,22 @@ l'application refuse elle-même une deuxième instance (plugin single-instance).
 `.cargo/config.toml` place le dossier de build dans `C:/Users/Octet/.cargo-targets/g13` (à adapter
 sur une autre machine). WebView2 est requis (présent sur Windows 11). L'éditeur de liens GNU affiche
 « .rsrc merge failure: multiple non-default manifests » : sans effet constaté à ce jour.
+
+### Linux : AppImage
+
+Construite sur Ubuntu 22.04 (`cargo tauri build --bundles appimage`, ou le workflow
+`.github/workflows/linux-appimage.yml`) ; `crates/g13-gui/tauri.linux.conf.json` ne s'applique que sous
+Linux (binaire `gnexus`, cible `appimage`). Détails et choix : `docs/LINUX_PORT.md`, étape 11.
+
+- **Accès aux appareils** (`g13_daemon::platform::linux::access`) : `status()` teste l'ouverture des
+  nœuds hidraw du G13, de la souris et du dongle (appareil USB parent `046D:C21C/C095/C547/0ABA`) et de
+  `/dev/uinput`, détecte un conteneur et l'autorisation de RECORD ; `install(record)` écrit les règles
+  de `deploy/linux` (embarquées) dans `/etc` par `pkexec`. Commandes Tauri `device_access`,
+  `install_device_access` (rend `true` s'il faut redémarrer : moteur non démarré faute de uinput) et
+  `restart_app`. Interface : bandeau `#access-banner` (vérifié toutes les 5 s), section
+  *Paramètres › Général › Accès aux appareils* (`linux-only`).
+- **Démarrage automatique** : `enable_autostart` met le chemin de `Exec=` entre guillemets (chemin
+  de l'AppImage avec un espace) ; `quote_desktop_exec` est testé.
 
 ### Version installable
 

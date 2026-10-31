@@ -1,0 +1,13 @@
+{
+  "$schema": "https://schema.tauri.app/config/2",
+  "mainBinaryName": "gnexus",
+  "bundle": {
+    "targets": ["appimage"],
+    "shortDescription": "Replaces Logitech Gaming Software / G HUB for the G13, G502 X PLUS and PRO X Wireless",
+    "linux": {
+      "appimage": {
+        "bundleMediaFramework": false
+      }
+    }
+  }
+}

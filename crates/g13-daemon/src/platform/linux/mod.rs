@@ -4,6 +4,7 @@
 //! back-ends; their bodies are filled in during the Linux port. Required
 //! permissions are provided by `deploy/linux/70-gnexus-uaccess.rules`.
 
+pub mod access;
 pub mod audio;
 pub mod eq;
 pub mod foreground;

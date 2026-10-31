@@ -58,7 +58,7 @@ Il tourne dans la zone de notification, sans logiciel Logitech, et fonctionne sa
 
 ## Téléchargement
 
-Les installateurs sont joints à chaque [version publiée](../../releases) : installateur Windows et paquet Arch / CachyOS.
+Les installateurs sont joints à chaque [version publiée](../../releases) : installateur Windows, AppImage Linux et paquet Arch / CachyOS.
 
 ### Windows
 
@@ -69,12 +69,14 @@ Les installateurs sont joints à chaque [version publiée](../../releases) : ins
 
 ### Linux
 
-Testé sous CachyOS (Arch), KDE Plasma 6, Wayland, PipeWire. Le changement automatique de profil et l'overlay en jeu demandent **KDE Plasma** ; tout le reste fonctionne sur n'importe quel bureau.
+Testé sous CachyOS (Arch) et **Bazzite** (Fedora Atomic), KDE Plasma 6, Wayland, PipeWire. Le changement automatique de profil et l'overlay en jeu demandent **KDE Plasma** ; tout le reste fonctionne sur n'importe quel bureau.
 
-1. Arch / CachyOS : installez le paquet joint à la version publiée, `sudo pacman -U gnexus-x.y.z-1-x86_64.pkg.tar.zst` (ou construisez-le avec le [`PKGBUILD`](deploy/linux/arch)). Il installe les règles udev et charge `uinput` ; rebranchez ensuite les appareils. Autres distributions : compilez depuis les sources (voir plus bas).
-2. L'accès aux appareils sans droits root vient des règles udev de [`deploy/linux`](deploy/linux) (installées par le paquet). La règle facultative `71-gnexus-record.rules` ne sert qu'à enregistrer des macros : le paquet indique comment l'activer.
-3. Ne faites pas tourner en même temps un autre programme qui pilote les mêmes appareils (Solaar, Piper / libratbag, HeadsetControl).
-4. L'égaliseur est un filtre PipeWire placé devant la sortie du casque : aucun droit root, et la sortie par défaut ne change pas.
+1. **AppImage** (Bazzite, Fedora, Ubuntu, Mint… et toute autre distribution) : téléchargez `gnexus_x.y.z_x86_64.AppImage` depuis la version publiée, rendez-le exécutable (clic droit › Propriétés › Exécutable, ou `chmod +x`) et lancez-le. Rien n'est installé dans le système et aucun redémarrage n'est nécessaire. Sur Bazzite, *Gear Lever* (préinstallé) peut l'ajouter au menu des applications et le mettre à jour.
+   - **Lancez l'AppImage directement sur le système, pas dans une distrobox / toolbox** : dans un conteneur, le démarrage à l'ouverture de session, l'heure du LCD et l'overlay fonctionnent mal (G Nexus le signale par un bandeau).
+2. **Arch / CachyOS** : installez plutôt le paquet joint à la version publiée, `sudo pacman -U gnexus-x.y.z-1-x86_64.pkg.tar.zst` (ou construisez-le avec le [`PKGBUILD`](deploy/linux/arch)). Il installe les règles udev et charge `uinput` ; rebranchez ensuite les appareils.
+3. **Accès aux appareils sans droits root** : il vient des règles udev de [`deploy/linux`](deploy/linux). Avec l'AppImage, si un appareil branché ou le clavier virtuel (`/dev/uinput`) n'est pas accessible, G Nexus affiche un bandeau **AUTORISER L'ACCÈS** : le mot de passe administrateur est demandé une seule fois et les règles sont copiées dans `/etc` (modifiable, même sur Bazzite). Sur Bazzite, les appareils sont souvent déjà accessibles (règles fournies par le système) et rien n'est demandé. L'enregistrement des macros (touche RECORD) s'autorise à part : *Paramètres › Général › Accès aux appareils*.
+4. Ne faites pas tourner en même temps un autre programme qui pilote les mêmes appareils (Solaar, Piper / libratbag, HeadsetControl).
+5. L'égaliseur est un filtre PipeWire placé devant la sortie du casque : aucun droit root, et la sortie par défaut ne change pas.
 
 Votre configuration Windows se transfère : *Paramètres › Configuration › Exporter* sous Windows, puis *Importer* sous Linux.
 
@@ -85,6 +87,11 @@ Rust (stable) est nécessaire. Tests : `cargo test --workspace` ; lint : `cargo 
 - **Linux** (paquets Arch) : `webkit2gtk-4.1 gtk3 libayatana-appindicator hidapi systemd-libs base-devel`, puis
   `CARGO_TARGET_DIR=target cargo build --release -p g13-gui` (binaire `target/release/g13-studio`).
   `.cargo/config.toml` contient un dossier de compilation propre à la machine Windows de l'auteur : `CARGO_TARGET_DIR` le remplace.
+- **AppImage** : sur Ubuntu 22.04 (une distrobox suffit, par exemple sous Bazzite), paquets
+  `libwebkit2gtk-4.1-dev libgtk-3-dev libayatana-appindicator3-dev librsvg2-dev libssl-dev libxdo-dev libudev-dev libfuse2 patchelf`,
+  puis depuis `crates/g13-gui` : `CARGO_TARGET_DIR=../../target npx @tauri-apps/cli@2 build --bundles appimage`
+  (ou `cargo tauri build --bundles appimage`). Le workflow [`linux-appimage.yml`](.github/workflows/linux-appimage.yml)
+  la construit et la joint à chaque version publiée.
 - **Windows** (toolchain GNU) : depuis `crates/g13-gui`, `npx @tauri-apps/cli@2 build` produit l'installateur NSIS.
 
 Documentation technique : [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md), [`docs/LINUX_PORT.md`](docs/LINUX_PORT.md).

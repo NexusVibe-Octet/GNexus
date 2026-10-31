@@ -1,7 +1,8 @@
-# Déploiement Linux (CachyOS / Arch)
+# Déploiement Linux (CachyOS / Arch, Bazzite, AppImage)
 
-Le paquet Arch (`arch/`, voir `arch/README.md`) installe tout cela lui-même : les commandes
-ci-dessous ne servent qu'en compilant à la main.
+Le paquet Arch (`arch/`, voir `arch/README.md`) installe tout cela lui-même, et l'AppImage le propose
+(bandeau « AUTORISER L'ACCÈS », mot de passe administrateur demandé une fois : les fichiers vont dans
+`/etc`, modifiable même sur Bazzite). Les commandes ci-dessous ne servent qu'en compilant à la main.
 
 Accès sans root aux trois appareils (G13, G502 X PLUS câblée ou LIGHTSPEED, dongle du casque
 PRO X Wireless) et à `/dev/uinput`, pour l'utilisateur connecté :

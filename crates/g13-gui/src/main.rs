@@ -516,7 +516,7 @@ fn set_settings(
 ) -> Result<(), String> {
     let launcher = app.autolaunch();
     if launcher.is_enabled().unwrap_or(false) != autostart {
-        let r = if autostart { launcher.enable() } else { launcher.disable() };
+        let r = if autostart { enable_autostart(&app) } else { launcher.disable().map_err(|e| e.to_string()) };
         r.map_err(|e| format!("démarrage automatique : {e}"))?;
     }
     let key = parse_overlay_key(overlay_key.as_deref());
@@ -609,7 +609,7 @@ fn apply_settings(app: &AppHandle, state: &AppState, settings: Settings, autosta
     if let Some(on) = autostart {
         let launcher = app.autolaunch();
         if launcher.is_enabled().unwrap_or(false) != on {
-            let r = if on { launcher.enable() } else { launcher.disable() };
+            let r = if on { enable_autostart(app) } else { launcher.disable().map_err(|e| e.to_string()) };
             r.map_err(|e| format!("démarrage automatique : {e}"))?;
         }
     }
@@ -994,6 +994,91 @@ fn gamepad_status() -> Result<(), String> {
     g13_daemon::platform::virtual_gamepad_available().map_err(|e| e.detail())
 }
 
+/// Register G Nexus to start with the session. Linux: the plugin writes the path unquoted in
+/// `~/.config/autostart/G Nexus.desktop` (`Exec=/path/G Nexus_1.1.1_amd64.AppImage --autostart`):
+/// a path with a space (the AppImage is named after "G Nexus") would not start. Quote it.
+fn enable_autostart(app: &AppHandle) -> Result<(), String> {
+    app.autolaunch().enable().map_err(|e| e.to_string())?;
+    #[cfg(target_os = "linux")]
+    if let Some(home) = std::env::var_os("HOME") {
+        let file = std::path::Path::new(&home)
+            .join(".config/autostart")
+            .join(format!("{}.desktop", app.package_info().name));
+        if let Ok(text) = std::fs::read_to_string(&file) {
+            let fixed = quote_desktop_exec(&text);
+            if fixed != text {
+                std::fs::write(&file, fixed).map_err(|e| e.to_string())?;
+            }
+        }
+    }
+    Ok(())
+}
+
+/// `Exec=<path> --autostart` with `<path>` quoted (desktop entry rules) when it is not already.
+#[cfg(target_os = "linux")]
+fn quote_desktop_exec(text: &str) -> String {
+    let mut out: Vec<String> = Vec::new();
+    for line in text.lines() {
+        match line.strip_prefix("Exec=") {
+            Some(cmd) if !cmd.starts_with('"') => {
+                let (path, args) = match cmd.rfind(" --autostart") {
+                    Some(i) => (&cmd[..i], &cmd[i..]),
+                    None => (cmd.trim_end(), ""),
+                };
+                let q: String = path.chars().flat_map(|c| match c {
+                    '"' | '`' | '$' | '\\' => vec!['\\', c],
+                    c => vec![c],
+                }).collect();
+                out.push(format!("Exec=\"{q}\"{args}"));
+            }
+            _ => out.push(line.to_string()),
+        }
+    }
+    let mut s = out.join("\n");
+    if text.ends_with('\n') {
+        s.push('\n');
+    }
+    s
+}
+
+/// Linux: can G Nexus open its devices and `/dev/uinput` (see `platform::linux::access`).
+/// `None` on the other systems (nothing to install).
+#[tauri::command]
+fn device_access() -> Option<serde_json::Value> {
+    #[cfg(target_os = "linux")]
+    {
+        serde_json::to_value(g13_daemon::platform::linux::access::status()).ok()
+    }
+    #[cfg(not(target_os = "linux"))]
+    {
+        None
+    }
+}
+
+/// Linux: install G Nexus's udev rules (administrator password asked once by polkit).
+/// Returns `true` when G Nexus must restart (its engine could not start without `/dev/uinput`).
+#[tauri::command]
+async fn install_device_access(record: bool) -> Result<bool, String> {
+    #[cfg(target_os = "linux")]
+    {
+        tauri::async_runtime::spawn_blocking(move || g13_daemon::platform::linux::access::install(record))
+            .await
+            .map_err(|e| e.to_string())?
+            .map(|r| r.restart)
+    }
+    #[cfg(not(target_os = "linux"))]
+    {
+        let _ = record;
+        Err("rien à installer sur ce système".into())
+    }
+}
+
+/// Restart G Nexus (after the device access was granted).
+#[tauri::command]
+fn restart_app(app: AppHandle) {
+    app.restart();
+}
+
 /// Every key name the engine accepts (the front-end checks its catalogue against it).
 #[tauri::command]
 fn key_names() -> Vec<&'static str> {
@@ -1314,6 +1399,9 @@ fn main() {
             set_preview,
             conflicting_software,
             close_conflicting_software,
+            device_access,
+            install_device_access,
+            restart_app,
             import_lgs,
             export_lgs,
             close_overlay,
@@ -1373,7 +1461,7 @@ fn main() {
                 let launcher = app.autolaunch();
                 if launcher.is_enabled().unwrap_or(false) {
                     let _ = launcher.disable();
-                    if let Err(e) = launcher.enable() {
+                    if let Err(e) = enable_autostart(app.handle()) {
                         log::warn!("autostart refresh failed: {e}");
                     }
                 }
@@ -1451,4 +1539,24 @@ fn main() {
             }
         }
     });
+}
+
+#[cfg(all(test, target_os = "linux"))]
+mod autostart_tests {
+    use super::quote_desktop_exec;
+
+    #[test]
+    fn quotes_a_path_with_spaces() {
+        let raw = "[Desktop Entry]\nType=Application\nExec=/home/u/Apps/G Nexus_1.1.1_amd64.AppImage --autostart\nTerminal=false";
+        let fixed = quote_desktop_exec(raw);
+        assert!(fixed.contains("Exec=\"/home/u/Apps/G Nexus_1.1.1_amd64.AppImage\" --autostart\n"));
+        // already quoted: unchanged
+        assert_eq!(quote_desktop_exec(&fixed), fixed);
+    }
+
+    #[test]
+    fn escapes_special_characters() {
+        let fixed = quote_desktop_exec("Exec=/a/$b\"c --autostart\n");
+        assert_eq!(fixed, "Exec=\"/a/\\$b\\\"c\" --autostart\n");
+    }
 }

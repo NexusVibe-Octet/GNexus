@@ -2,8 +2,9 @@
 
 Logiciel Rust (Tauri 2) qui remplace Logitech Gaming Software et G HUB pour trois appareils :
 clavier **G13**, souris **G502 X PLUS** (HID++ 2.0), casque **PRO X Wireless** (HID++ 2.0, dongle 046D:0ABA).
-La version Windows est terminée et validée par l'utilisateur ; le travail en cours est le **portage Linux**
-(CachyOS, Wayland, PipeWire) : voir [docs/LINUX_PORT.md](docs/LINUX_PORT.md).
+La version Windows est terminée et validée par l'utilisateur ; le **portage Linux** (CachyOS, Wayland,
+PipeWire ; Bazzite par l'AppImage) est fait : voir [docs/LINUX_PORT.md](docs/LINUX_PORT.md).
+Linux se distribue en paquet Arch (`deploy/linux/arch`) et en AppImage (`.github/workflows/linux-appimage.yml`).
 
 L'utilisateur parle français : répondre en français. Il est en clavier **AZERTY**.
 

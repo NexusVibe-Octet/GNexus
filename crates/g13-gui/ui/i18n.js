@@ -1013,6 +1013,40 @@ const TR = {
     "Modalità controller non disponibile: {e}", "Modo mando no disponible: {e}"],
   "Manette virtuelle : {m}": ["Virtual gamepad: {m}", "Virtueller Controller: {m}", "Controller virtuale: {m}", "Mando virtual: {m}"],
   "Erreur au démarrage : {e}": ["Startup error: {e}", "Fehler beim Start: {e}", "Errore all'avvio: {e}", "Error al iniciar: {e}"],
+
+  // ---- Linux: device access (udev rules), container ------------------------------------
+  "AUTORISER L'ACCÈS": ["ALLOW ACCESS", "ZUGRIFF ERLAUBEN", "CONSENTI L'ACCESSO", "PERMITIR EL ACCESO"],
+  "ACCÈS AUX APPAREILS": ["DEVICE ACCESS", "GERÄTEZUGRIFF", "ACCESSO AI DISPOSITIVI", "ACCESO A LOS DISPOSITIVOS"],
+  "AUTORISER RECORD": ["ALLOW RECORD", "RECORD ERLAUBEN", "CONSENTI RECORD", "PERMITIR RECORD"],
+  "G Nexus accède au G13, à la souris, au casque et à son clavier virtuel (/dev/uinput) grâce à des règles udev, installées une seule fois avec le mot de passe administrateur. Enregistrer des macros (touche RECORD) demande en plus la lecture des claviers et souris : tout programme de votre session pourra alors lire la frappe, comme sous X11.": [
+    "G Nexus reaches the G13, the mouse, the headset and its virtual keyboard (/dev/uinput) through udev rules, installed once with the administrator password. Recording macros (RECORD key) also needs read access to keyboards and mice: any program of your session can then read keystrokes, as under X11.",
+    "G Nexus greift über udev-Regeln auf den G13, die Maus, das Headset und seine virtuelle Tastatur (/dev/uinput) zu; sie werden einmalig mit dem Administratorpasswort installiert. Makros aufnehmen (RECORD-Taste) erfordert zusätzlich Lesezugriff auf Tastaturen und Mäuse: Jedes Programm Ihrer Sitzung kann dann Tastenanschläge lesen, wie unter X11.",
+    "G Nexus accede al G13, al mouse, alle cuffie e alla sua tastiera virtuale (/dev/uinput) tramite regole udev, installate una sola volta con la password di amministratore. Registrare macro (tasto RECORD) richiede anche la lettura di tastiere e mouse: qualsiasi programma della sessione potrà allora leggere i tasti premuti, come con X11.",
+    "G Nexus accede al G13, al ratón, a los auriculares y a su teclado virtual (/dev/uinput) mediante reglas udev, instaladas una sola vez con la contraseña de administrador. Grabar macros (tecla RECORD) requiere además leer teclados y ratones: cualquier programa de tu sesión podrá entonces leer las pulsaciones, como en X11."],
+  "le clavier virtuel (/dev/uinput)": ["the virtual keyboard (/dev/uinput)", "die virtuelle Tastatur (/dev/uinput)",
+    "la tastiera virtuale (/dev/uinput)", "el teclado virtual (/dev/uinput)"],
+  "G Nexus tourne dans un conteneur (distrobox, toolbox) : le démarrage à l'ouverture de session, l'heure du LCD et l'overlay peuvent mal fonctionner. Lancez l'AppImage de G Nexus directement sur le système, hors du conteneur.": [
+    "G Nexus is running inside a container (distrobox, toolbox): starting at login, the LCD clock and the overlay may not work properly. Run the G Nexus AppImage directly on the system, outside the container.",
+    "G Nexus läuft in einem Container (distrobox, toolbox): Start bei der Anmeldung, die LCD-Uhr und das Overlay funktionieren eventuell nicht richtig. Starten Sie das G-Nexus-AppImage direkt auf dem System, außerhalb des Containers.",
+    "G Nexus è in esecuzione in un container (distrobox, toolbox): l'avvio all'accesso, l'orologio del LCD e l'overlay potrebbero non funzionare bene. Avvia l'AppImage di G Nexus direttamente sul sistema, fuori dal container.",
+    "G Nexus se ejecuta dentro de un contenedor (distrobox, toolbox): el inicio al abrir sesión, el reloj del LCD y el overlay pueden fallar. Ejecuta el AppImage de G Nexus directamente en el sistema, fuera del contenedor."],
+  "G Nexus n'a pas accès à : {who}. Autorisez l'accès une fois (le mot de passe administrateur est demandé), puis rebranchez l'appareil si besoin.": [
+    "G Nexus has no access to: {who}. Allow access once (the administrator password is asked), then plug the device in again if needed.",
+    "G Nexus hat keinen Zugriff auf: {who}. Erlauben Sie den Zugriff einmalig (das Administratorpasswort wird abgefragt) und schließen Sie das Gerät bei Bedarf neu an.",
+    "G Nexus non ha accesso a: {who}. Consenti l'accesso una volta (viene chiesta la password di amministratore), poi ricollega il dispositivo se necessario.",
+    "G Nexus no tiene acceso a: {who}. Permite el acceso una vez (se pide la contraseña de administrador) y vuelve a conectar el dispositivo si hace falta."],
+  "dans un conteneur : non disponible": ["inside a container: unavailable", "in einem Container: nicht verfügbar",
+    "in un container: non disponibile", "dentro de un contenedor: no disponible"],
+  "manquant : {who}": ["missing: {who}", "fehlt: {who}", "mancante: {who}", "falta: {who}"],
+  "OK (RECORD compris)": ["OK (RECORD included)", "OK (inklusive RECORD)", "OK (RECORD incluso)", "OK (RECORD incluido)"],
+  "OK (RECORD non autorisé)": ["OK (RECORD not allowed)", "OK (RECORD nicht erlaubt)", "OK (RECORD non consentito)", "OK (RECORD no permitido)"],
+  "Accès aux appareils autorisé": ["Device access allowed", "Gerätezugriff erlaubt", "Accesso ai dispositivi consentito", "Acceso a los dispositivos permitido"],
+  "Accès autorisé : G Nexus redémarre…": ["Access allowed: G Nexus is restarting…", "Zugriff erlaubt: G Nexus startet neu…",
+    "Accesso consentito: G Nexus si riavvia…", "Acceso permitido: G Nexus se reinicia…"],
+  "Règles installées : rebranchez l'appareil pour terminer": ["Rules installed: plug the device in again to finish",
+    "Regeln installiert: Schließen Sie das Gerät zum Abschluss neu an", "Regole installate: ricollega il dispositivo per finire",
+    "Reglas instaladas: vuelve a conectar el dispositivo para terminar"],
+  "Accès non autorisé : {e}": ["Access not allowed: {e}", "Zugriff nicht erlaubt: {e}", "Accesso non consentito: {e}", "Acceso no permitido: {e}"],
 };
 
 /** Translate `key` (French) into the current language and fill `{vars}`. */
