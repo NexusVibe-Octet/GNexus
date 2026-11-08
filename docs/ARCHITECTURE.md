@@ -743,17 +743,36 @@ profil 1). Les actions de profil G13 Studio ne sont actives qu'en temps réel.
 | `shiftstate` 1 / 2 / 3 | menus M1 / M2 / M3 |
 | `contextid` G1–G25 · G26 / G27 / G28 / G29 | G1–G25 (G25 = clic stick) · stick haut / droite / bas / gauche |
 | affectation `backup="false"` (personnalisée avant d'origine) | active ; `backup="true"` = ancienne valeur gardée par LGS, ignorée |
-| `<keystroke>` (une ou plusieurs `<key value>`) | touche / combinaison — noms LGS = positions physiques US, comme `KeyCode` |
+| `<keystroke>` (`<key value>`, `<modifier value>`) | touche / combinaison — noms LGS = positions physiques US, comme `KeyCode` |
+| `<multikey>` : `<key direction value>`, `<mousebutton direction button>`, `<delay milliseconds>` | séquence de touches, boutons souris gauche / droit / milieu et pauses, dans l'ordre |
+| `repeatmode="pressed"` / `"toggle"` et `repeatdelay` | répétition maintenue / bascule ; pause entre cycles (25 ms par défaut dans LGS) |
 | `<mousefunction>` leftclick / rightclick / middleclick / back / forward | boutons souris |
 | `<hotkeys>` copy / paste / cut | Ctrl+C / V / X |
-| `<function>` média | touches média |
+| `<media>` / `<function>` média reconnus | touches média (correspondance exacte, pas de recherche par sous-chaîne) |
 | `<backlight devicemodel="…G13"><mode color shiftstate>` | couleur de chaque menu |
 | `<target path>` (sauf `LCORE.EXE`) | application associée (nom de l'exe) |
 
-Non converti, et listé dans un rapport plutôt que deviné : macros à séquence (`multikey`), blocs de
-texte, scripts Lua, raccourcis dépendant de la disposition (`undo`, …) ; à l'export : molette,
-macros à étapes et boutons de manette. Les noms LGS des touches rares (pavé numérique, touches spéciales) suivent la
-nomenclature de l'API Lua de LGS : l'import accepte plusieurs variantes.
+Les séquences sont importées uniquement si elles sont affectées au G13 et entièrement reconnues. Les
+appuis et relâchements doivent être équilibrés : une touche / un bouton non relâché, un appui double,
+un événement ou attribut inconnu, une valeur numérique invalide ou une macro à GUID dupliqué fait
+ignorer **toute** l'affectation et l'inscrire au rapport. Les macros sont préfixées `LGS: ` ; deux
+GUID de même nom reçoivent des noms distincts, un GUID réutilisé partage sa définition. Une frappe
+`keystroke` répétée émet chaque cycle sous forme d'appui puis relâchement de l'accord.
+
+Le moteur impose un cycle minimal de 10 ms : une répétition dont les pauses explicites (y compris
+`repeatdelay`) totalisent moins de 10 ms est signalée plutôt que ralentie silencieusement par ce
+plancher. Les délais restent soumis à l'ordonnancement du système. En mode répété, G Nexus annule immédiatement la lecture à la demande d'arrêt et relâche les entrées
+encore tenues ; le comportement précis par rapport à LGS doit être vérifié sur Windows et G13.
+
+Non converti, et listé dans un rapport plutôt que deviné : événements non reconnus ou mouvements de
+souris dans les séquences, boutons supplémentaires non identifiés, répétition d'autres types de
+commande, blocs de texte, scripts Lua du profil (même le modèle LGS par défaut), raccourcis dépendant
+de la disposition (`undo`, …) ; à l'export : molette, macros à étapes et boutons de manette.
+Les noms LGS des touches rares (pavé numérique, touches spéciales) suivent la nomenclature de l'API
+Lua de LGS : l'import accepte plusieurs variantes. Les structures de séquences ont été comparées
+aux exemples publics [Logitech-G13-Profiles](https://github.com/MarkJerde/Logitech-G13-Profiles) et
+[logitech-g13-profiles](https://github.com/cheshire137/logitech-g13-profiles) ; les modes et délais de
+répétition sont décrits par [Logitech](https://support.logi.com/hc/en-us/articles/360023177534-Create-macros-for-gaming-mice-and-keyboards-with-Logitech-Gaming-Software).
 
 ## Profils
 

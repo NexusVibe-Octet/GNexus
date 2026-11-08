@@ -968,7 +968,7 @@ $("#btn-import").addEventListener("click", async () => {
     await refreshProfiles();
     await loadEdit(r.id);
     if (r.skipped.length) {
-      showReport("IMPORT LGS", t("Profil « {name} » importé. Ces affectations n'ont pas pu être reprises :", { name: r.name }), r.skipped);
+      showReport("IMPORT LGS", t("Profil « {name} » importé. Ces éléments n'ont pas pu être repris :", { name: r.name }), r.skipped);
     } else {
       toast(t("Profil « {name} » importé", { name: r.name }));
     }

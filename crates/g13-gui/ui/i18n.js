@@ -908,11 +908,11 @@ const TR = {
   "SUPPRIMER « {name} » ?": ["DELETE “{name}”?", "„{name}“ LÖSCHEN?", "ELIMINARE «{name}»?", "¿ELIMINAR «{name}»?"],
   "SUPPRIMER": ["DELETE", "LÖSCHEN", "ELIMINA", "ELIMINAR"],
   "Profil supprimé": ["Profile deleted", "Profil gelöscht", "Profilo eliminato", "Perfil eliminado"],
-  "Profil « {name} » importé. Ces affectations n'ont pas pu être reprises :": [
-    "Profile “{name}” imported. These assignments could not be carried over:",
-    "Profil „{name}“ importiert. Diese Belegungen konnten nicht übernommen werden:",
-    "Profilo «{name}» importato. Queste assegnazioni non sono state riprese:",
-    "Perfil «{name}» importado. Estas asignaciones no se pudieron recuperar:"],
+  "Profil « {name} » importé. Ces éléments n'ont pas pu être repris :": [
+    "Profile “{name}” imported. These items could not be carried over:",
+    "Profil „{name}“ importiert. Diese Elemente konnten nicht übernommen werden:",
+    "Profilo «{name}» importato. Questi elementi non sono stati ripresi:",
+    "Perfil «{name}» importado. Estos elementos no se pudieron recuperar:"],
   "Profil « {name} » importé": ["Profile “{name}” imported", "Profil „{name}“ importiert", "Profilo «{name}» importato",
     "Perfil «{name}» importado"],
   "Import impossible : {e}": ["Import failed: {e}", "Import fehlgeschlagen: {e}", "Importazione non riuscita: {e}", "No se pudo importar: {e}"],
