@@ -744,7 +744,7 @@ profil 1). Les actions de profil G13 Studio ne sont actives qu'en temps réel.
 | `contextid` G1–G25 · G26 / G27 / G28 / G29 | G1–G25 (G25 = clic stick) · stick haut / droite / bas / gauche |
 | affectation `backup="false"` (personnalisée avant d'origine) | active ; `backup="true"` = ancienne valeur gardée par LGS, ignorée |
 | `<keystroke>` (`<key value>`, `<modifier value>`) | touche / combinaison — noms LGS = positions physiques US, comme `KeyCode` |
-| `<multikey>` : `<key direction value>`, `<mousebutton direction button>`, `<delay milliseconds>` | séquence de touches, boutons souris gauche / droit / milieu et pauses, dans l'ordre |
+| `<multikey>` : `<key direction value>`, `<mousebutton direction button>`, `<delay milliseconds>` | séquence de touches, boutons souris gauche / droit / milieu et pauses, dans l'ordre ; accord clavier simple maintenu (voir ci-dessous) |
 | `repeatmode="pressed"` / `"toggle"` et `repeatdelay` | répétition maintenue / bascule ; pause entre cycles (25 ms par défaut dans LGS) |
 | `<mousefunction>` leftclick / rightclick / middleclick / back / forward | boutons souris |
 | `<hotkeys>` copy / paste / cut | Ctrl+C / V / X |
@@ -758,6 +758,15 @@ un événement ou attribut inconnu, une valeur numérique invalide ou une macro 
 ignorer **toute** l'affectation et l'inscrire au rapport. Les macros sont préfixées `LGS: ` ; deux
 GUID de même nom reçoivent des noms distincts, un GUID réutilisé partage sa définition. Une frappe
 `keystroke` répétée émet chaque cycle sous forme d'appui puis relâchement de l'accord.
+
+Pour un `multikey` **sans répétition, sans délai et composé d'un seul accord clavier**, LGS décrit
+un maintien des touches jusqu'au relâchement de la touche G13. L'import le traduit en affectation
+clavier maintenue plutôt qu'en macro jouée immédiatement. L'ordre des appuis doit être compatible
+avec celui de G Nexus (modificateurs d'abord), et celui des relâchements doit être l'ordre inverse ;
+sinon l'affectation est signalée plutôt que réordonnée. Cette forme devient une affectation clavier,
+pas une entrée nommée dans la table de macros. Les séquences avec délais ou souris restent des
+séquences : leur comportement exact et le maintien doivent être comparés à LGS sur Windows avec un
+vrai G13. Référence : [aide LGS G13, enregistrement de macros](https://www.manualowl.com/m/Logitech/G13/Manual/419627?page=84).
 
 Le moteur impose un cycle minimal de 10 ms : une répétition dont les pauses explicites (y compris
 `repeatdelay`) totalisent moins de 10 ms est signalée plutôt que ralentie silencieusement par ce

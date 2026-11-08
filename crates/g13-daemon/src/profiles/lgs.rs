@@ -26,10 +26,13 @@
 //!   exactly like our [`KeyCode`]s — no layout translation is needed.
 //! * Supported macro kinds: `keystroke` (including modifiers and repetition),
 //!   balanced `multikey` sequences (keys, basic mouse buttons and delays),
-//!   `mousefunction`, `hotkeys` copy/paste/cut and known media keys.
+//!   `mousefunction`, `hotkeys` copy/paste/cut and known media keys. A single
+//!   no-delay keyboard-only `multikey` chord without repetition is held with
+//!   the G-key as described in the LGS manual, if its event order is representable.
 //!   Unknown steps, unsupported repetition and unbalanced sequences are
 //!   reported as a whole, never partly converted. Text blocks, Lua scripts and
 //!   layout-dependent hotkeys such as undo are also reported, not guessed.
+//!   Timed and mouse-containing chords still need an LGS / G13 comparison.
 
 use std::collections::{HashMap, HashSet};
 use std::fmt::Write as _;
@@ -461,6 +464,12 @@ fn multikey(body: roxmltree::Node<'_, '_>, play: Playback) -> Result<ConvertedMa
     let mut buttons = HashSet::new();
     let mut wait_ms = 0u64;
     let mut has_event = false;
+    // LGS holds a plain multikey chord until the physical G-key is released.
+    // Recognise the documented, unambiguous no-delay keyboard-only case.
+    let mut plain_chord = true;
+    let mut saw_release = false;
+    let mut chord_down = Vec::new();
+    let mut chord_up = Vec::new();
     for n in body.children().filter(|c| c.is_element()) {
         if n.tag_name().namespace() != body.tag_name().namespace() {
             return Err("espace de noms inattendu dans multikey".into());
@@ -474,10 +483,20 @@ fn multikey(body: roxmltree::Node<'_, '_>, play: Playback) -> Result<ConvertedMa
                 if if down { !keys.insert(k) } else { !keys.remove(&k) } {
                     return Err(format!("appui/relâchement incohérent de la touche « {v} »"));
                 }
+                if down {
+                    if saw_release {
+                        plain_chord = false;
+                    }
+                    chord_down.push(k);
+                } else {
+                    saw_release = true;
+                    chord_up.push(k);
+                }
                 steps.push(format!("{} {}", if down { "down" } else { "up" }, k.name()));
                 has_event = true;
             }
             "mousebutton" => {
+                plain_chord = false;
                 leaf(n, &["button", "direction"])?;
                 let v = n.attribute("button").unwrap_or("");
                 let b = match v.to_ascii_lowercase().as_str() {
@@ -494,6 +513,9 @@ fn multikey(body: roxmltree::Node<'_, '_>, play: Playback) -> Result<ConvertedMa
                 has_event = true;
             }
             "delay" => {
+                // Preserve explicit timing as a sequence. Its interaction
+                // with LGS hold behavior still needs a Windows hardware test.
+                plain_chord = false;
                 leaf(n, &["milliseconds"])?;
                 let v = n.attribute("milliseconds").unwrap_or("");
                 let ms = v.parse::<u32>().map_err(|_| format!("délai LGS « {v} » invalide"))?;
@@ -508,6 +530,16 @@ fn multikey(body: roxmltree::Node<'_, '_>, play: Playback) -> Result<ConvertedMa
     }
     if !keys.is_empty() || !buttons.is_empty() {
         return Err("séquence multikey avec touche ou bouton non relâché".into());
+    }
+    if matches!(play, Playback::Once) && plain_chord {
+        // KeyChord sorts modifiers first and releases in reverse press order.
+        // Refuse a chord we cannot reproduce exactly instead of playing it as
+        // an immediate sequence or silently changing its event order.
+        let chord = KeyChord::new(chord_down.clone());
+        if chord.keys() != chord_down || !chord_down.iter().rev().eq(chord_up.iter()) {
+            return Err("ordre d'appui/relâchement de l'accord multikey non pris en charge".into());
+        }
+        return Ok(ConvertedMacro::Direct(ActionDto::Chord(chord.to_string())));
     }
     sequence(play, steps, wait_ms)
 }
@@ -785,6 +817,111 @@ mod tests {
     }
 
     #[test]
+    fn lgs_simple_multikey_chord_is_held_until_the_g_key_is_released() {
+        use crate::device::DeviceEvent;
+        use crate::engine::{Engine, action::Action};
+        use crate::platform::mock::{Injected, RecordingInjector};
+        use g13_core::G13Key;
+        use std::sync::{Arc, mpsc::channel};
+
+        // The exact example documented by Logitech's G13 LGS manual: a single
+        // chord without delays must mirror the physical G-key's press/release.
+        let keys = r#"<key value="A" direction="down"/><key value="X" direction="down"/>
+            <key value="SPACEBAR" direction="down"/><key value="SPACEBAR" direction="up"/>
+            <key value="X" direction="up"/><key value="A" direction="up"/>"#;
+        let xml = profile_xml(&sequence_xml("a", "Held chord", "", keys), &assignment("a", "G1", 1), "");
+        let imported = import(&xml).unwrap();
+        assert!(imported.skipped.is_empty(), "{:?}", imported.skipped);
+        let doc = from_dto(imported.dto).unwrap();
+        assert!(matches!(doc.profile.bank(MBank::M1).get(G13Key::G1), Action::Key(_)));
+
+        let rec = Arc::new(RecordingInjector::new());
+        let (tx, _rx) = channel();
+        let mut engine = Engine::new(rec.clone(), tx, doc.profile);
+        engine.handle(DeviceEvent::Key { key: G13Key::G1, pressed: true });
+        assert_eq!(rec.take(), vec![
+            Injected::Key(KeyCode::A, true), Injected::Key(KeyCode::X, true), Injected::Key(KeyCode::Space, true),
+        ]);
+        // No up event may be sent until the physical key is released.
+        std::thread::sleep(std::time::Duration::from_millis(5));
+        assert!(rec.take().is_empty());
+        engine.handle(DeviceEvent::Key { key: G13Key::G1, pressed: false });
+        assert_eq!(rec.take(), vec![
+            Injected::Key(KeyCode::Space, false), Injected::Key(KeyCode::X, false), Injected::Key(KeyCode::A, false),
+        ]);
+        engine.handle(DeviceEvent::Key { key: G13Key::G1, pressed: true });
+        let _ = rec.take(); // consume the new down events
+        engine.handle(DeviceEvent::Disconnected);
+        assert_eq!(rec.take(), vec![
+            Injected::Key(KeyCode::Space, false), Injected::Key(KeyCode::X, false), Injected::Key(KeyCode::A, false),
+        ], "disconnect must release the held chord");
+    }
+
+    #[test]
+    fn lgs_single_key_and_modifier_chords_are_imported_as_held_keys() {
+        let one = r#"<key value="W" direction="down"/><key value="W" direction="up"/>"#;
+        let modified = r#"<key value="LCTRL" direction="down"/><key value="C" direction="down"/>
+            <key value="C" direction="up"/><key value="LCTRL" direction="up"/>"#;
+        let xml = profile_xml(
+            &[sequence_xml("a", "Single", "", one), sequence_xml("b", "Modified", "", modified)].concat(),
+            &[assignment("a", "G1", 1), assignment("b", "G2", 1)].concat(), "",
+        );
+        let imported = import(&xml).unwrap();
+        assert!(imported.skipped.is_empty(), "{:?}", imported.skipped);
+        assert_eq!(key(&imported.dto, MBank::M1, "G1").as_deref(), Some(r#""W""#));
+        assert_eq!(key(&imported.dto, MBank::M1, "G2").as_deref(), Some(r#""LeftCtrl+C""#));
+        assert!(imported.dto.macros.is_empty());
+        let (exported, skipped) = export(&imported.dto);
+        assert!(skipped.is_empty(), "{skipped:?}");
+        let roundtrip = import(&exported).unwrap();
+        assert_eq!(key(&roundtrip.dto, MBank::M1, "G1"), key(&imported.dto, MBank::M1, "G1"));
+        assert_eq!(key(&roundtrip.dto, MBank::M1, "G2"), key(&imported.dto, MBank::M1, "G2"));
+        from_dto(imported.dto).unwrap();
+    }
+
+    #[test]
+    fn lgs_held_chords_with_unrepresentable_order_are_reported_not_reordered() {
+        let wrong_release = r#"<key value="A" direction="down"/><key value="X" direction="down"/>
+            <key value="A" direction="up"/><key value="X" direction="up"/>"#;
+        let late_modifier = r#"<key value="A" direction="down"/><key value="LCTRL" direction="down"/>
+            <key value="LCTRL" direction="up"/><key value="A" direction="up"/>"#;
+        let xml = profile_xml(
+            &[sequence_xml("a", "Release order", "", wrong_release), sequence_xml("b", "Modifier order", "", late_modifier)].concat(),
+            &[assignment("a", "G1", 1), assignment("b", "G2", 1)].concat(), "",
+        );
+        let imported = import(&xml).unwrap();
+        for id in ["G1", "G2"] {
+            assert!(key(&imported.dto, MBank::M1, id).is_none());
+            assert!(imported.skipped.iter().any(|s| s.contains(id)), "{id}: {:?}", imported.skipped);
+        }
+        assert_eq!(imported.skipped.len(), 2);
+        assert!(imported.dto.macros.is_empty());
+        from_dto(imported.dto).unwrap();
+    }
+
+    #[test]
+    fn lgs_timed_and_multiple_keystrokes_keep_their_sequence_steps() {
+        let timed = r#"<key value="A" direction="down"/><delay milliseconds="20"/>
+            <key value="A" direction="up"/>"#;
+        let taps = r#"<key value="A" direction="down"/><key value="A" direction="up"/>
+            <key value="X" direction="down"/><key value="X" direction="up"/>"#;
+        let xml = profile_xml(
+            &[sequence_xml("a", "Timed", "", timed), sequence_xml("b", "Two taps", "", taps)].concat(),
+            &[assignment("a", "G1", 1), assignment("b", "G2", 1)].concat(), "",
+        );
+        let imported = import(&xml).unwrap();
+        assert!(imported.skipped.is_empty(), "{:?}", imported.skipped);
+        let a = sequence_at(&imported.dto, MBank::M1, "G1").1;
+        let b = sequence_at(&imported.dto, MBank::M1, "G2").1;
+        assert_eq!(a.mode, ModeDto::Once);
+        assert_eq!(a.steps, vec!["down A", "wait 20", "up A"]);
+        assert_eq!(b.mode, ModeDto::Once);
+        assert_eq!(b.steps, vec!["down A", "up A", "down X", "up X"]);
+        from_dto(imported.dto).unwrap();
+        // The LGS semantics of timed / mixed mouse chords remain unverified.
+    }
+
+    #[test]
     fn imports_multikey_steps_in_order_and_survives_profile_serialization() {
         let steps = r#"
           <key value="LCTRL" direction="down"/><delay milliseconds="81"/>
@@ -871,8 +1008,9 @@ mod tests {
 
     #[test]
     fn shares_guids_but_never_overwrites_duplicate_names() {
-        let steps_a = r#"<key value="A" direction="down"/><key value="A" direction="up"/>"#;
-        let steps_b = r#"<key value="B" direction="down"/><key value="B" direction="up"/>"#;
+        // Two successive taps are sequences rather than the held single chord.
+        let steps_a = r#"<key value="A" direction="down"/><key value="A" direction="up"/><key value="A" direction="down"/><key value="A" direction="up"/>"#;
+        let steps_b = r#"<key value="B" direction="down"/><key value="B" direction="up"/><key value="B" direction="down"/><key value="B" direction="up"/>"#;
         let macros = [
             sequence_xml("a", "Dup", "", steps_a), sequence_xml("b", "Dup", "", steps_b),
             sequence_xml("c", "Dup (2)", "", steps_a), sequence_xml("d", "__proto__", "", steps_a),
@@ -919,9 +1057,8 @@ mod tests {
         let slow = sequence_at(&imported.dto, MBank::M1, "G3").1;
         assert_eq!(slow.mode, ModeDto::RepeatWhileHeld);
         assert_eq!(slow.steps, vec!["down A", "wait 10", "up A", "wait 0"]);
-        let once = sequence_at(&imported.dto, MBank::M1, "G4").1;
-        assert_eq!(once.mode, ModeDto::Once);
-        assert_eq!(once.steps, vec!["down A", "up A"]);
+        // LGS's one-key multikey without repetition is held, not tapped.
+        assert_eq!(key(&imported.dto, MBank::M1, "G4").as_deref(), Some(r#""A""#));
         let click = sequence_at(&imported.dto, MBank::M1, "G5").1;
         assert_eq!(click.mode, ModeDto::RepeatWhileHeld);
         assert_eq!(click.steps, vec!["mouse_down Left", "mouse_up Left", "wait 30"]);
