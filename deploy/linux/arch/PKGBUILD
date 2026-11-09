@@ -20,7 +20,7 @@ install=gnexus.install
 options=('!lto' '!debug')
 source=("$pkgname-$pkgver.tar.gz::$url/archive/refs/tags/v$pkgver.tar.gz")
 # Run `updpkgsums` once the release archive is on GitHub.
-sha256sums=('SKIP')
+sha256sums=('cbb18812c92bdd0d008f551eb1a81cad8ef6cd7cadd1f1450bf6fe7e57def6bc')
 
 prepare() {
     cd "$pkgname-$pkgver"
