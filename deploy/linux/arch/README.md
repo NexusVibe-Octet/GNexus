@@ -18,7 +18,7 @@ demande dans ses paramètres (`~/.config/autostart/G Nexus.desktop`).
 
 ```sh
 cd deploy/linux/arch
-updpkgsums          # une fois l'archive v1.1.2 publiée sur GitHub (remplace SKIP)
+updpkgsums          # une fois l'archive v1.1.3 publiée sur GitHub (remplace SKIP)
 makepkg -si
 ```
 
@@ -31,9 +31,9 @@ des dépendances (les autres dépendances doivent alors déjà être installées
 
 ```sh
 B=$(mktemp -d) && cp deploy/linux/arch/{PKGBUILD,gnexus.install} "$B"
-tar --exclude=./target --exclude=./.git --transform 's,^\.,gnexus-1.1.2,' -czf "$B/gnexus-1.1.2.tar.gz" .
+tar --exclude=./target --exclude=./.git --transform 's,^\.,gnexus-1.1.3,' -czf "$B/gnexus-1.1.3.tar.gz" .
 cd "$B" && makepkg -d -f
-sudo pacman -U gnexus-1.1.2-1-x86_64.pkg.tar.zst
+sudo pacman -U gnexus-1.1.3-1-x86_64.pkg.tar.zst
 ```
 
 ## Publier
