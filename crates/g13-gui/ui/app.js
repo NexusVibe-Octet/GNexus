@@ -981,7 +981,7 @@ $("#btn-export").addEventListener("click", async () => {
     const skipped = await invoke("export_lgs", { id: S.editId });
     if (skipped == null) return; // cancelled
     if (skipped.length) {
-      showReport("EXPORT LGS", t("Profil exporté. Logitech Gaming Software ne peut pas recevoir ces affectations :"), skipped);
+      showReport("EXPORT LGS", t("Profil exporté. Ces éléments ne passent pas, ou pas entièrement, dans Logitech Gaming Software :"), skipped);
     } else {
       toast(t("Profil exporté pour Logitech Gaming Software"));
     }

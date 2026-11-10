@@ -715,13 +715,41 @@ pub fn export(dto: &FileDto) -> (String, Vec<String>) {
                         assigns,
                         "      <assignment contextid=\"{ctx}\" macroguid=\"{g}\" shiftstate=\"{shift}\" original=\"false\" backup=\"false\"/>"
                     );
+                    // only the tap action of a multi-action key reaches LGS: say what is lost
+                    if let ActionDto::TapDance { hold, double_tap, tap_hold, .. } = action {
+                        let lost: Vec<&str> = [(hold, "appui long"), (double_tap, "double appui"), (tap_hold, "appui court + long")]
+                            .into_iter()
+                            .filter_map(|(a, what)| a.is_some().then_some(what))
+                            .collect();
+                        if !lost.is_empty() {
+                            skipped.push(format!(
+                                "{bank:?} {id} : seul l'appui court est exporté (perdu : {})",
+                                lost.join(", ")
+                            ));
+                        }
+                    }
                 }
                 Err(why) => skipped.push(format!("{bank:?} {id} : {why}")),
             }
         }
     }
 
-    let target = dto.rules.iter().find_map(|r| r.exe.clone()).unwrap_or_else(|| LCORE_PATH.to_string());
+    // LGS links a profile to one program, by its path: no window title, no second rule
+    let target_rule = dto.rules.iter().position(|r| r.exe.is_some());
+    for (i, r) in dto.rules.iter().enumerate() {
+        let what = match (&r.exe, &r.title) {
+            (Some(e), Some(t)) => format!("« {e} » avec le titre « {t} »"),
+            (Some(e), None) => format!("« {e} »"),
+            (None, Some(t)) => format!("titre « {t} »"),
+            (None, None) => continue,
+        };
+        if Some(i) != target_rule {
+            skipped.push(format!("règle d'application {what} : LGS n'accepte qu'un programme par profil"));
+        } else if r.title.is_some() {
+            skipped.push(format!("règle d'application {what} : LGS ne connaît pas le titre de fenêtre, seul le programme est exporté"));
+        }
+    }
+    let target = target_rule.and_then(|i| dto.rules[i].exe.clone()).unwrap_or_else(|| LCORE_PATH.to_string());
     let name = xml_escape(&dto.name);
     let mut out = String::new();
     let _ = write!(
@@ -1254,6 +1282,26 @@ mod tests {
         assert_eq!(skipped.len(), 2);
         assert!(xml.contains("name=\"x &amp; &lt;y&gt;\""));
         roxmltree::Document::parse(&xml).unwrap();
+    }
+
+    #[test]
+    fn export_reports_lost_hold_actions_and_rules() {
+        let mut d = FileDto { name: "x".into(), ..FileDto::default() };
+        let a = |s: &str| Some(Box::new(ActionDto::Chord(s.into())));
+        d.banks.m1.keys.insert("G1".into(), ActionDto::TapDance { tap: a("A"), hold: a("B"), double_tap: None, tap_hold: None });
+        d.banks.m1.keys.insert("G2".into(), ActionDto::TapDance { tap: a("C"), hold: None, double_tap: None, tap_hold: None });
+        d.rules = vec![
+            MatchRule { exe: Some("game.exe".into()), title: Some("Raid".into()) },
+            MatchRule::exe("other.exe"),
+        ];
+        let (xml, skipped) = export(&d);
+        assert_eq!(skipped.len(), 3, "{skipped:?}");
+        assert!(skipped[0].contains("G1") && skipped[0].contains("appui long"), "{skipped:?}");
+        assert!(skipped.iter().any(|s| s.contains("Raid")), "{skipped:?}");
+        assert!(skipped.iter().any(|s| s.contains("other.exe")), "{skipped:?}");
+        assert!(xml.contains("<target path=\"game.exe\"/>"));
+        // the tap action is still exported
+        assert_eq!(import(&xml).unwrap().dto.banks.m1.keys.len(), 2);
     }
 
     /// Manual check on a real LGS export: `G13_LGS_SAMPLE=path cargo test -- --ignored lgs`

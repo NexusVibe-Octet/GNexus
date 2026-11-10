@@ -916,11 +916,11 @@ const TR = {
   "Profil « {name} » importé": ["Profile “{name}” imported", "Profil „{name}“ importiert", "Profilo «{name}» importato",
     "Perfil «{name}» importado"],
   "Import impossible : {e}": ["Import failed: {e}", "Import fehlgeschlagen: {e}", "Importazione non riuscita: {e}", "No se pudo importar: {e}"],
-  "Profil exporté. Logitech Gaming Software ne peut pas recevoir ces affectations :": [
-    "Profile exported. Logitech Gaming Software cannot take these assignments:",
-    "Profil exportiert. Logitech Gaming Software kann diese Belegungen nicht übernehmen:",
-    "Profilo esportato. Logitech Gaming Software non può ricevere queste assegnazioni:",
-    "Perfil exportado. Logitech Gaming Software no admite estas asignaciones:"],
+  "Profil exporté. Ces éléments ne passent pas, ou pas entièrement, dans Logitech Gaming Software :": [
+    "Profile exported. These items do not carry over, or only partly, to Logitech Gaming Software:",
+    "Profil exportiert. Diese Elemente werden nicht oder nur teilweise in Logitech Gaming Software übernommen:",
+    "Profilo esportato. Questi elementi non passano, o solo in parte, in Logitech Gaming Software:",
+    "Perfil exportado. Estos elementos no pasan, o solo en parte, a Logitech Gaming Software:"],
   "Profil exporté pour Logitech Gaming Software": ["Profile exported for Logitech Gaming Software",
     "Profil für Logitech Gaming Software exportiert", "Profilo esportato per Logitech Gaming Software",
     "Perfil exportado para Logitech Gaming Software"],

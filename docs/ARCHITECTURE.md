@@ -823,7 +823,7 @@ par emplacement, `TAP_TERM` = 200 ms, vérifié à chaque tick de 10 ms) disting
 - deux appuis courts → **double_tap** ; second appui tenu 200 ms → **tap_hold** (tenu) ;
 - un hold ou un tap-hold vide retombe sur le tap ; sans aucun autre mode qu'un tap, l'action est ordinaire (réaction immédiate,
   aucun délai). Une macro dans un tap dance est jouée une fois. Changement de profil, déconnexion et arrêt
-  remettent tout à zéro (rien ne reste enfoncé). L'export LGS ne garde que le tap.
+  remettent tout à zéro (rien ne reste enfoncé). L'export LGS ne garde que le tap et le signale dans son rapport (appui long, double appui perdus).
 
 Dans l'interface, le sélecteur d'action d'une touche du G13 a à gauche une grille 2×2 Tap / Hold / Tap-Tap /
 Tap-Hold : on choisit un mode, puis son action ; le × vide un mode. Une touche multi-états affiche son tap
