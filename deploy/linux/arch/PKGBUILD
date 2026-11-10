@@ -8,7 +8,9 @@ pkgver=1.1.4
 pkgrel=1
 pkgdesc="Replaces Logitech Gaming Software / G HUB for the G13, G502 X PLUS and PRO X Wireless"
 arch=('x86_64')
-url="https://github.com/NexusVibe-Octet/gnexus"
+url="https://github.com/NexusVibe-Octet/GNexus"
+# folder inside the GitHub archive (named after the repository)
+_srcdir="GNexus-$pkgver"
 license=('MIT OR Apache-2.0')
 depends=('webkit2gtk-4.1' 'gtk3' 'libayatana-appindicator' 'systemd-libs' 'hicolor-icon-theme')
 makedepends=('cargo')
@@ -20,16 +22,16 @@ install=gnexus.install
 options=('!lto' '!debug')
 source=("$pkgname-$pkgver.tar.gz::$url/archive/refs/tags/v$pkgver.tar.gz")
 # Run `updpkgsums` once the release archive is on GitHub.
-sha256sums=('SKIP')
+sha256sums=('16c8e45e17f56ff274f64f9395b2e326a641a8b377a163af006e3f6d48896ae8')
 
 prepare() {
-    cd "$pkgname-$pkgver"
+    cd "$_srcdir"
     export RUSTUP_TOOLCHAIN=stable
     cargo fetch --locked --target "$(rustc -vV | sed -n 's/host: //p')"
 }
 
 build() {
-    cd "$pkgname-$pkgver"
+    cd "$_srcdir"
     export RUSTUP_TOOLCHAIN=stable
     # .cargo/config.toml names a build directory of the author's Windows machine
     export CARGO_TARGET_DIR=target
@@ -37,14 +39,14 @@ build() {
 }
 
 check() {
-    cd "$pkgname-$pkgver"
+    cd "$_srcdir"
     export RUSTUP_TOOLCHAIN=stable
     export CARGO_TARGET_DIR=target
     cargo test --frozen --release -p g13-core -p g13-daemon -p g13-dsp -p logi-hidpp
 }
 
 package() {
-    cd "$pkgname-$pkgver"
+    cd "$_srcdir"
     install -Dm755 target/release/g13-studio "$pkgdir/usr/bin/gnexus"
     install -Dm644 deploy/linux/gnexus.desktop "$pkgdir/usr/share/applications/gnexus.desktop"
     install -Dm644 crates/g13-gui/icons/32x32.png "$pkgdir/usr/share/icons/hicolor/32x32/apps/gnexus.png"
