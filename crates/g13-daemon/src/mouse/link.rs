@@ -3,6 +3,7 @@
 
 use std::cell::RefCell;
 use std::collections::VecDeque;
+use std::ffi::CString;
 use std::time::{Duration, Instant};
 
 use hidapi::{HidApi, HidDevice};
@@ -135,6 +136,47 @@ pub struct Mouse {
     pub link: Link,
     pub name: String,
     pub product_id: u16,
+    /// Where it was found, to watch for it closely once it falls asleep.
+    pub spot: Spot,
+}
+
+/// A HID++ collection and a device index on it.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct Spot {
+    pub path: CString,
+    pub index: u8,
+}
+
+impl Spot {
+    /// Open the spot for a ping. The receiver does not report a mouse waking up
+    /// (no 0x41 notification: the LIGHTSPEED link stays up while it sleeps, measured),
+    /// but a sleeping mouse does not answer and a woken one answers at once.
+    pub fn open(&self, api: &HidApi) -> Option<Link> {
+        let dev = api.open_path(&self.path).ok()?;
+        Some(Link { dev, index: self.index, timeout: PROBE_TIMEOUT, sw_id: logi_hidpp::SW_ID, events: RefCell::default() })
+    }
+}
+
+impl Link {
+    /// HID++ 2.0 ping: is the device there and awake?
+    pub fn ping(&self) -> bool {
+        self.call(0, 1, &[0, 0, 0x5A]).is_ok_and(|d| d[0] >= 2)
+    }
+}
+
+/// The mouse at `spot`, if it is there and awake (without searching the other receivers).
+pub fn find_at(api: &HidApi, spot: &Spot) -> Option<Mouse> {
+    let info = api.device_list().find(|d| d.path() == spot.path.as_c_str())?;
+    let mut link = spot.open(api)?;
+    if !link.ping() {
+        return None;
+    }
+    link.timeout = TIMEOUT;
+    // just woken, the mouse answered the ping but may miss the next request (measured):
+    // try again at once rather than one search round later
+    (0..3).find_map(|_| link.feature(f::ONBOARD_PROFILES))?;
+    let name = link.name().unwrap_or_else(|| "souris".into());
+    Some(Mouse { link, name, product_id: info.product_id(), spot: spot.clone() })
 }
 
 /// Every HID++ 2.0 device with onboard profiles (gaming mice) currently reachable.
@@ -147,13 +189,14 @@ pub fn find_mice(api: &HidApi) -> Vec<Mouse> {
         let Ok(mut dev) = info.open_device(api) else { continue };
         for index in [DIRECT, 1, 2, 3, 4, 5, 6] {
             let mut link = Link { dev, index, timeout: PROBE_TIMEOUT, sw_id: logi_hidpp::SW_ID, events: RefCell::default() };
-            let is_mouse = link.call(0, 1, &[0, 0, 0x5A]).is_ok_and(|d| d[0] >= 2) && {
+            let is_mouse = link.ping() && {
                 link.timeout = TIMEOUT;
                 link.feature(f::ONBOARD_PROFILES).is_some()
             };
             if is_mouse {
                 let name = link.name().unwrap_or_else(|| "souris".into());
-                out.push(Mouse { link, name, product_id: info.product_id() });
+                let spot = Spot { path: info.path().to_owned(), index };
+                out.push(Mouse { link, name, product_id: info.product_id(), spot });
                 break;
             }
             dev = link.dev;

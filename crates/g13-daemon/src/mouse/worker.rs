@@ -34,6 +34,7 @@ use serde::Serialize;
 use super::host::{self, Effect, HostState, SoftProfile};
 use super::link::Link;
 use super::settings::{self, Lighting, MouseSettings};
+use super::link::{Spot, find_at};
 use super::{Mouse, find_mice};
 use crate::engine::action::MacroMode;
 use crate::engine::macros::{self, MacroHandle};
@@ -43,8 +44,12 @@ use crate::profiles::format::macro_from_dto;
 /// Executable in the foreground, kept up to date by the engine thread.
 pub type Focus = Arc<Mutex<Option<String>>>;
 
-/// Look for a mouse this often while none is connected.
+/// Look for a mouse this often while none is connected. Not much more often: a
+/// sleeping LIGHTSPEED mouse pinged every 150 ms never stays asleep (measured).
 const DISCOVERY: Duration = Duration::from_secs(3);
+/// Once a mouse was seen, only its own place is checked, except one round in this
+/// many, which searches every receiver (the mouse may have moved to a cable…).
+const FULL_SEARCH: u32 = 5;
 const BATTERY_EVERY: Duration = Duration::from_secs(60);
 /// The profile button may change the active profile at any time.
 const PROFILE_EVERY: Duration = Duration::from_secs(2);
@@ -203,14 +208,27 @@ impl MouseWorker {
             }
         };
         let mut announced = false;
+        // where the last mouse was (it is most likely asleep there) and the rounds since
+        let mut last: Option<Spot> = None;
+        let mut round = 0u32;
         while !self.stopping() {
             if let Err(e) = api.refresh_devices() {
                 log::debug!("mouse: hidapi refresh failed: {e}");
             }
-            match find_mice(&api).into_iter().next() {
+            // A woken mouse is taken back at the next round. Searching every receiver
+            // took ~2 s more per round (the other receivers and the headset dongle are
+            // probed too): only one round in FULL_SEARCH does it once a mouse was seen.
+            round += 1;
+            let found = match &last {
+                Some(spot) if !round.is_multiple_of(FULL_SEARCH) => find_at(&api, spot),
+                _ => find_mice(&api).into_iter().next(),
+            };
+            match found {
                 Some(m) => {
                     log::info!("mouse connected: {} ({:04X})", m.name, m.product_id);
                     announced = false;
+                    last = Some(m.spot.clone());
+                    round = 0;
                     self.session(m);
                     log::info!("mouse disconnected (asleep, off or unplugged)");
                     let st = self.absent();

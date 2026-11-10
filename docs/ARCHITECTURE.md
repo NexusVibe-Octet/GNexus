@@ -430,7 +430,11 @@ l'étape 1. Constats :
   surveille le profil courant (bouton de la souris) toutes les 2 s, la batterie toutes les 60 s et
   G HUB toutes les 5 s, et publie un `MouseStatus` (`UiEvent::Mouse`, relayé par le moteur via
   `Request::Emit`). Trois requêtes sans réponse = souris partie (veille, hors de portée) : il la
-  recherche ensuite.
+  recherche ensuite : toutes les 3 s, seulement à son emplacement (`Spot` : collection + indice,
+  `find_at`, un ping court ; recherche complète de tous les récepteurs un tour sur 5). Le récepteur
+  LIGHTSPEED ne signale pas le réveil (pas de notification 0x41 : la liaison reste établie pendant la
+  veille) et une souris pingée toutes les 150 ms ne reste jamais endormie (mesuré) : d'où 3 s. Juste
+  réveillée, elle peut répondre au ping puis manquer la requête suivante : `find_at` réessaie aussitôt.
 - **Réglages** (`mouse/settings.rs`, `MouseSettings`) : 1 à 5 paliers DPI (valeurs alignées sur le
   pas du capteur), palier au démarrage, palier « sniper », fréquence 125–1000 Hz, éclairage
   (dégradé d'usine = animation 3, fixe, respiration, cycle, éteint ; un effet inconnu reste tel
