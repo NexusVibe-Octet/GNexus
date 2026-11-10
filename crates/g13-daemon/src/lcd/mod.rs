@@ -14,6 +14,7 @@
 //! Like Logitech Gaming Software. Frames are only sent when they change.
 
 pub mod applets;
+pub mod i18n;
 
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::mpsc::{Receiver, RecvTimeoutError, Sender, channel};
@@ -63,6 +64,8 @@ pub struct LcdContext<'a> {
     pub mouse_battery: Option<(u8, bool)>,
     /// Increases at every rendered frame (scrolling).
     pub frame: u64,
+    /// Language of the texts (that of the GUI).
+    pub lang: i18n::Lang,
 }
 
 #[derive(Debug, Clone, Copy, Default, PartialEq)]
@@ -122,6 +125,7 @@ pub struct LcdManager {
     sys_stats: SysStats,
     sys_next: Instant,
     mouse_battery: Option<(u8, bool)>,
+    lang: i18n::LangCell,
 }
 
 impl LcdManager {
@@ -147,7 +151,13 @@ impl LcdManager {
             sys_stats: SysStats::default(),
             sys_next: now,
             mouse_battery: None,
+            lang: i18n::LangCell::default(),
         }
+    }
+
+    /// Language of the LCD texts; set from any thread, used from the next frame.
+    pub fn language(&self) -> i18n::LangCell {
+        self.lang.clone()
     }
 
     pub fn current_applet(&self) -> usize {
@@ -184,13 +194,15 @@ impl LcdManager {
             sys: self.sys_stats,
             mouse_battery: self.mouse_battery,
             frame: self.frame,
+            lang: self.lang.get(),
         }
     }
 
     fn show(&mut self, index: usize, ctx: &LcdContext<'_>) {
         self.current = index % self.applets.len();
         self.applets[self.current].on_show(ctx);
-        self.banner = Some((self.applets[self.current].title().to_uppercase(), Instant::now()));
+        let title = i18n::tr(ctx.lang, self.applets[self.current].title());
+        self.banner = Some((title.to_uppercase(), Instant::now()));
     }
 
     /// Call on the engine thread at every tick.
@@ -282,7 +294,7 @@ impl LcdManager {
         let mut lcd = G13LcdBuffer::new();
         let applet = &mut self.applets[self.current];
         applet.render(&mut lcd, &ctx);
-        applets::softkeys(&mut lcd, applet.keys());
+        applets::softkeys(&mut lcd, applet.keys().map(|k| i18n::tr(ctx.lang, k)));
         if let Some((text, since)) = &self.banner {
             if since.elapsed() < BANNER {
                 draw_banner(&mut lcd, text);

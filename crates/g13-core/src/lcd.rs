@@ -245,6 +245,7 @@ const GRAVE: &[(usize, usize)] = &[(1, 0), (2, 1)];
 const CIRC: &[(usize, usize)] = &[(2, 0), (1, 1), (3, 1)];
 const DIAER: &[(usize, usize)] = &[(1, 0), (3, 0)];
 const CEDIL: &[(usize, usize)] = &[(2, 7)];
+const TILDE: &[(usize, usize)] = &[(1, 1), (2, 0), (3, 1), (4, 0)];
 const NONE: &[(usize, usize)] = &[];
 
 /// Characters the 5x7 font can show (ASCII + the accented letters below).
@@ -271,12 +272,21 @@ fn decompose(c: char) -> (char, &'static [(usize, usize)]) {
         'ù' => ('u', GRAVE),
         'û' => ('u', CIRC),
         'ü' => ('u', DIAER),
+        // Italian and Spanish (LCD texts in those languages)
+        'á' => ('a', ACUTE),
+        'í' => ('i', ACUTE),
+        'ì' => ('i', GRAVE),
+        'ó' => ('o', ACUTE),
+        'ò' => ('o', GRAVE),
+        'ú' => ('u', ACUTE),
+        'ñ' => ('n', TILDE),
         'É' | 'È' | 'Ê' | 'Ë' => ('E', NONE),
-        'À' | 'Â' | 'Ä' => ('A', NONE),
+        'À' | 'Â' | 'Ä' | 'Á' => ('A', NONE),
         'Ç' => ('C', NONE),
-        'Î' | 'Ï' => ('I', NONE),
-        'Ô' | 'Ö' => ('O', NONE),
-        'Ù' | 'Û' | 'Ü' => ('U', NONE),
+        'Î' | 'Ï' | 'Í' | 'Ì' => ('I', NONE),
+        'Ô' | 'Ö' | 'Ó' | 'Ò' => ('O', NONE),
+        'Ù' | 'Û' | 'Ü' | 'Ú' => ('U', NONE),
+        'Ñ' => ('N', NONE),
         '’' | '‘' => ('\'', NONE),
         '“' | '”' | '«' | '»' => ('"', NONE),
         '–' | '—' => ('-', NONE),

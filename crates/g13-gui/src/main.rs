@@ -587,6 +587,10 @@ fn ui_language(app: AppHandle, state: State<AppState>, lang: String) -> Result<(
         return Ok(());
     }
     *state.ui_lang.lock().unwrap() = lang.clone();
+    // the G13 screen speaks the same language
+    if let Some(rt) = state.runtime.lock().unwrap().as_ref() {
+        rt.set_lcd_language(&lang);
+    }
     if let Some(tray) = app.tray_by_id("main") {
         tray.set_menu(Some(tray_menu(&app, &lang).map_err(|e| e.to_string())?)).map_err(|e| e.to_string())?;
     }

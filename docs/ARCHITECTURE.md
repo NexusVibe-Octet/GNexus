@@ -74,6 +74,7 @@ crates/
     src/lcd/
       mod.rs                  LcdManager (sélection L1–L4, bandeau, thread média, rendu ≤ 4 Hz)
       applets.rs              Profil · Horloge · Média · Système
+      i18n.rs                 textes du LCD (fr, en, de, it, es), langue de l'interface
     src/platform/
       mod.rs                  traits + fabriques default_*()
       mock.rs                 RecordingInjector (--dry-run, tests), watchers nuls
@@ -279,7 +280,7 @@ Le rétroéclairage reste piloté par le bouton lumière matériel du G13 (gér�
 | **Profil** | « PROFIL · MENU Mx », nom du profil, jeu associé / « Profil par défaut » / « Actif partout » | — · — · PROFILS (va à la liste) |
 | **Profils** | « Auto (selon le jeu) » puis les profils dans l'ordre de G13 Studio (`ProfileStore::ordered`), `*` = choix courant, `<` = actif | HAUT · BAS · OK |
 | **Média** | état, source, titre et artiste défilants, position / durée — `MediaProvider` interrogé 1×/s par le thread `g13-media`, seulement quand l'applet est affiché | précédent · lecture/pause · suivant |
-| **Horloge** | HH:MM en grand, secondes, date en français (`chrono`, heure locale) | — |
+| **Horloge** | HH:MM en grand, secondes, date dans la langue de l'interface (`chrono`, heure locale ; sans l'année si elle ne tient pas) | — |
 | **Système** | CPU et RAM en barres (`sysinfo`) | — |
 
 Choisir un profil dans « Profils » le **fixe partout** (`ProfileManager::set_pinned`, le même
@@ -287,7 +288,13 @@ mécanisme que « Tester partout » de G13 Studio, synchronisé par `UiEvent::Pi
 rétablit la bascule automatique. Un bandeau inversé de 1,5 s annonce le changement d'applet, de menu
 ou de profil. Après une reconnexion, l'image est renvoyée.
 
-- **Rendu** (`g13-core/src/lcd.rs`) : police 5×7 + accents français dessinés dans les deux lignes
+- **Langue** (`lcd/i18n.rs`) : textes, libellés L1–L4, noms d'applets du bandeau, jours et mois en
+  fr / en / de / it / es (le français est le texte source, comme `ui/i18n.js`). La page signale sa
+  langue (`ui_language`) → `Runtime::set_lcd_language` → `LangCell` partagé (atomique), lu à chaque
+  image : le changement apparaît à l'image suivante. Français tant que rien n'est signalé (`g13d`).
+  Un test vérifie que tous les textes sont dessinables par la police.
+
+- **Rendu** (`g13-core/src/lcd.rs`) : police 5×7 + accents (français, á í ó ú ì ò ñ pour l'italien et l'espagnol) dessinés dans les deux lignes
   libres au-dessus des minuscules (é è ê à ç…), capitales accentuées → lettre de base, caractères
   non dessinables (emoji…) ignorés sans trou ; texte agrandi (`draw_text_scaled`), fenêtre défilante
   (`draw_text_window`), `fill_rect`, `invert_rect`, `draw_bar`.

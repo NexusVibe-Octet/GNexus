@@ -4,6 +4,7 @@
 use chrono::{Datelike, Timelike};
 use g13_core::{G13LcdBuffer, LCD_HEIGHT, LCD_WIDTH};
 
+use super::i18n::{self, tr};
 use super::{Applet, LcdAction, LcdContext};
 use crate::platform::{MediaCommand, PlaybackStatus};
 
@@ -88,7 +89,7 @@ impl Applet for Status {
     }
 
     fn render(&mut self, lcd: &mut G13LcdBuffer, ctx: &LcdContext<'_>) {
-        let left = if ctx.pinned.is_some() { "PROFIL - FIXE" } else { "PROFIL" };
+        let left = tr(ctx.lang, if ctx.pinned.is_some() { "PROFIL - FIXE" } else { "PROFIL" });
         header(lcd, left, &format!("MENU {}", ctx.bank));
         let name = ctx.profile_name;
         if G13LcdBuffer::text_width(name, 2) <= W - 4 {
@@ -98,9 +99,9 @@ impl Applet for Status {
         }
         // the game only when it is what selected this profile
         let foot = match ctx.game {
-            _ if ctx.pinned.is_some() => "Actif partout".to_string(),
+            _ if ctx.pinned.is_some() => tr(ctx.lang, "Actif partout").to_string(),
             Some(g) if ctx.game_matched && !g.is_empty() => g.to_string(),
-            _ if ctx.profile_default => "Profil par défaut".to_string(),
+            _ if ctx.profile_default => tr(ctx.lang, "Profil par défaut").to_string(),
             _ => String::new(),
         };
         marquee(lcd, 2, 26, W - 4, &foot, ctx.frame);
@@ -155,7 +156,7 @@ impl Applet for Profiles {
     }
 
     fn render(&mut self, lcd: &mut G13LcdBuffer, ctx: &LcdContext<'_>) {
-        header(lcd, "PROFILS", if ctx.pinned.is_some() { "FIXE" } else { "AUTO" });
+        header(lcd, tr(ctx.lang, "PROFILS"), tr(ctx.lang, if ctx.pinned.is_some() { "FIXE" } else { "AUTO" }));
         let rows = Self::rows(ctx);
         self.cursor = self.cursor.min(rows.len().saturating_sub(1));
         // 3 visible rows, scrolled so the cursor stays visible
@@ -167,7 +168,7 @@ impl Applet for Profiles {
                 Some(id) => ctx.pinned == Some(id.as_str()),
             };
             let label = match row {
-                None => "Auto (selon le jeu)".to_string(),
+                None => tr(ctx.lang, "Auto (selon le jeu)").to_string(),
                 Some(id) => {
                     let n = ctx.profiles.iter().position(|p| &p.id == id).map_or(0, |n| n + 1);
                     let name = ctx.profiles.iter().find(|p| &p.id == id).map_or(id.as_str(), |p| p.name.as_str());
@@ -212,15 +213,15 @@ impl Applet for Media {
 
     fn render(&mut self, lcd: &mut G13LcdBuffer, ctx: &LcdContext<'_>) {
         let Some(m) = &ctx.media else {
-            header(lcd, "MEDIA", "");
-            centered(lcd, 18, "Aucun média en cours", 1);
+            header(lcd, tr(ctx.lang, "MEDIA"), "");
+            centered(lcd, 18, tr(ctx.lang, "Aucun média en cours"), 1);
             return;
         };
-        let state = match m.status {
+        let state = tr(ctx.lang, match m.status {
             PlaybackStatus::Playing => "> LECTURE",
             PlaybackStatus::Paused => "|| PAUSE",
             PlaybackStatus::Stopped => "[] ARRET",
-        };
+        });
         let source = m.source.as_deref().map(short_source).unwrap_or_default();
         header(lcd, state, &source);
         marquee(lcd, 2, 11, W - 4, &m.title, ctx.frame);
@@ -252,12 +253,6 @@ fn short_source(s: &str) -> String {
 
 pub struct Clock;
 
-const DAYS: [&str; 7] = ["lundi", "mardi", "mercredi", "jeudi", "vendredi", "samedi", "dimanche"];
-const MONTHS: [&str; 12] = [
-    "janvier", "février", "mars", "avril", "mai", "juin", "juillet", "août", "septembre", "octobre", "novembre",
-    "décembre",
-];
-
 impl Applet for Clock {
     fn title(&self) -> &'static str {
         "Horloge"
@@ -270,13 +265,12 @@ impl Applet for Clock {
         let x = (W - w - 16) / 2;
         lcd.draw_text_scaled(x, 3, &hm, 4); // 28 px high
         lcd.draw_text(x + w + 4, 24, &format!("{:02}", t.second()));
-        let date = format!(
-            "{} {} {} {}",
-            DAYS[t.weekday().num_days_from_monday() as usize],
-            t.day(),
-            MONTHS[t.month0() as usize],
-            t.year()
-        );
+        let date = |with_year| {
+            i18n::date(ctx.lang, t.weekday().num_days_from_monday() as usize, t.day(), t.month0() as usize, t.year(), with_year)
+        };
+        // "Donnerstag 30. September 2026" is wider than the screen: drop the year then
+        let full = date(true);
+        let date = if G13LcdBuffer::text_width(&full, 1) <= W { full } else { date(false) };
         centered(lcd, LCD_HEIGHT - 8, &date, 1);
     }
 }
@@ -295,11 +289,11 @@ impl Applet for SystemMon {
         let gb = |b: u64| b as f64 / 1_073_741_824.0;
         // the mouse battery when there is one, else the memory in GB
         let right = match ctx.mouse_battery {
-            Some((pct, charging)) => format!("SOURIS {pct}%{}", if charging { "+" } else { "" }),
-            None if s.mem_total > 0 => format!("{:.1}/{:.0} Go", gb(s.mem_used), gb(s.mem_total)),
+            Some((pct, charging)) => format!("{} {pct}%{}", tr(ctx.lang, "SOURIS"), if charging { "+" } else { "" }),
+            None if s.mem_total > 0 => format!("{:.1}/{:.0} {}", gb(s.mem_used), gb(s.mem_total), tr(ctx.lang, "Go")),
             None => String::new(),
         };
-        header(lcd, "SYSTEME", &right);
+        header(lcd, tr(ctx.lang, "SYSTEME"), &right);
         lcd.draw_text(2, 14, "CPU");
         lcd.draw_bar(24, 13, 100, 9, s.cpu / 100.0);
         lcd.draw_text(130, 14, &format!("{:>3.0}%", s.cpu));
@@ -336,7 +330,24 @@ mod tests {
             sys: SysStats { cpu: 42.0, mem_used: 8 << 30, mem_total: 32 << 30 },
             mouse_battery: Some((93, true)),
             frame: 0,
+            lang: i18n::Lang::Fr,
         }
+    }
+
+    #[test]
+    fn texts_follow_the_language() {
+        let render = |lang| {
+            let mut lcd = G13LcdBuffer::new();
+            Clock.render(&mut lcd, &LcdContext { lang, ..ctx(None, None) });
+            lcd
+        };
+        // same time, different day and month names
+        assert_ne!(render(i18n::Lang::Fr), render(i18n::Lang::En));
+        let mut lcd = G13LcdBuffer::new();
+        let mut fr = G13LcdBuffer::new();
+        SystemMon.render(&mut fr, &ctx(None, None));
+        SystemMon.render(&mut lcd, &LcdContext { lang: i18n::Lang::De, ..ctx(None, None) });
+        assert_ne!(fr, lcd, "SYSTEME / SOURIS translated");
     }
 
     fn lit(lcd: &G13LcdBuffer) -> usize {

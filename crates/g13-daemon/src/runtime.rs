@@ -73,6 +73,7 @@ pub struct Runtime {
     recent: crate::profiles::manager::RecentApps,
     requests: Sender<Request>,
     profiles_dir: Option<PathBuf>,
+    lcd_lang: crate::lcd::i18n::LangCell,
     engine: Option<JoinHandle<()>>,
     hid: Option<JoinHandle<()>>,
     mouse: Option<(Sender<MouseCommand>, JoinHandle<()>)>,
@@ -123,6 +124,7 @@ impl Runtime {
         let mut engine = Engine::new(injector.clone(), cmd_tx, profile);
         engine.set_overlay_key(opts.overlay_key);
         let mut lcd = LcdManager::new(engine.subscribe());
+        let lcd_lang = lcd.language();
         let ui = engine.subscribe();
         engine.emit(UiEvent::ActiveProfile(profiles.active_id().to_string()));
 
@@ -192,7 +194,17 @@ impl Runtime {
             .map_err(|e| format!("could not start engine thread: {e}"))?;
 
         Ok((
-            Self { shutdown, recent, requests: req_tx, profiles_dir, engine: Some(engine_thread), hid: Some(hid), mouse, headset },
+            Self {
+                shutdown,
+                recent,
+                requests: req_tx,
+                profiles_dir,
+                lcd_lang,
+                engine: Some(engine_thread),
+                hid: Some(hid),
+                mouse,
+                headset,
+            },
             ui,
         ))
     }
@@ -222,6 +234,14 @@ impl Runtime {
     pub fn headset(&self, cmd: HeadsetCommand) {
         if let Some((tx, _)) = &self.headset {
             let _ = tx.send(cmd);
+        }
+    }
+
+    /// Language of the LCD texts (`"fr"`, `"en"`, `"de"`, `"it"`, `"es"`; others
+    /// are ignored). French until set; applied from the next frame.
+    pub fn set_lcd_language(&self, code: &str) {
+        if let Some(lang) = crate::lcd::i18n::Lang::from_code(code) {
+            self.lcd_lang.set(lang);
         }
     }
 
