@@ -31,7 +31,7 @@ des dépendances (les autres dépendances doivent alors déjà être installées
 
 ```sh
 B=$(mktemp -d) && cp deploy/linux/arch/{PKGBUILD,gnexus.install} "$B"
-tar --exclude=./target --exclude=./.git --transform 's,^\.,gnexus-1.1.4,' -czf "$B/gnexus-1.1.4.tar.gz" .
+tar --exclude=./target --exclude=./.git --transform 's,^\.,GNexus-1.1.4,' -czf "$B/gnexus-1.1.4.tar.gz" .
 cd "$B" && makepkg -d -f
 sudo pacman -U gnexus-1.1.4-1-x86_64.pkg.tar.zst
 ```
